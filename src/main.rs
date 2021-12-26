@@ -1,3 +1,7 @@
+mod server;
+use std::sync::Arc;
+
+use server::Server;
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::TcpListener,
@@ -15,11 +19,12 @@ use tokio::{
 async fn main() {
     let listener = TcpListener::bind("0.0.0.0:6666").await.unwrap();
     let (tx, _rx) = broadcast::channel(10);
-
+    let server = Arc::new(Server::new());
     loop {
-        let (mut socket, addr) = listener.accept().await.unwrap(); 
+        let (mut socket, addr) = listener.accept().await.unwrap();
         let tx = tx.clone();
         let mut rx = tx.subscribe();
+        let server = Arc::clone(&server);
         tokio::spawn(async move {
             let (reader, mut writer) = socket.split();
             let mut reader = BufReader::new(reader);
@@ -38,12 +43,16 @@ async fn main() {
                         if addr != other_addr {
                             writer.write_all(msg.as_bytes()).await.unwrap();
                         }
+                        server.handle(&msg);
                     }
                 }
             }
         });
     }
 }
+
+
+
 // println!("let's play Schnapsen!");
 
 // let client1 = Client::create("localhost:12345");
