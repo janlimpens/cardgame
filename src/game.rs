@@ -1,86 +1,34 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
-use std::collections::HashMap;
 use rand::seq::SliceRandom;
-use std::fmt;
-use std::string::ToString;
+// use std::collections::HashMap;
 
-#[derive(Debug)]
-pub struct Card {
-    pub value: u8,
-    pub suite: Suite,
-    pub facing: Facing,
-}
-
-impl fmt::Display for Card {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self.value {
-            1 => String::from("Ace"),
-            11 => String::from("Jack"),
-            12 => String::from("Queen"),
-            13 => String::from("King"),
-            _ => self.value.to_string(),
-        };
-        match self.facing {
-            Facing::Up => write!(f, "{} of {}", name, self.suite),
-            _ => write!(f, "a card"),
-        }
-    }
-}
-
-impl Card {
-    pub fn turn_around(&mut self) {
-        match self.facing {
-            Facing::Up => self.facing = Facing::Down,
-            Facing::Down => self.facing = Facing::Up,
-            Facing::TowardsPlayer => self.facing = Facing::AwayFromPlayer,
-            Facing::AwayFromPlayer => self.facing = Facing::TowardsPlayer,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Suite {
-    Hearts,
-    Tiles,
-    Clovers,
-    Pikes,
-}
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Facing {
-    Up,
-    Down,
-    TowardsPlayer,
-    AwayFromPlayer,
-}
-
-impl fmt::Display for Suite {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
+use crate::card::{Card, Facing, Stack, Suite};
 
 #[derive(Debug)]
 pub struct Deck {
     cards: Vec<Card>,
-    color: String
+    color: String,
 }
 
 impl Deck {
     pub fn build(values: &[u8], color: String) -> Self {
-        let mut deck = Deck { cards: Vec::new(), color };
+        let mut deck = Deck {
+            cards: Vec::new(),
+            color,
+        };
         let suites = [Suite::Hearts, Suite::Tiles, Suite::Clovers, Suite::Pikes];
         for &value in values {
             for &suite in suites.iter() {
                 deck.cards.push(Card {
                     value,
                     suite,
-                    facing: Facing::Down,    
+                    facing: Facing::Down,
                 });
             }
         }
+        println!("A {color} deck has been created.");
         deck
     }
 
@@ -103,22 +51,6 @@ impl Deck {
     }
 }
 
-pub struct Stack {
-    pub name: String,
-    facing: Facing,
-    cards: Vec<Card>,
-}
-
-impl Stack {
-    pub fn new(name: String, facing: Facing) -> Self {
-        Stack {
-            name,
-            facing,
-            cards: Vec::new(),
-        }
-    }
-}
-
 pub struct Player {
     pub name: String,
     pub hand: Stack,
@@ -137,14 +69,15 @@ impl Player {
 }
 
 pub struct Table {
-    pub heaps: Vec<Stack>,
+    pub stacks: Vec<Stack>,
     players: Vec<Player>,
 }
 
 impl Table {
+    
     pub fn new() -> Self {
         Table {
-            heaps: Vec::new(),
+            stacks: Vec::new(),
             players: Vec::new(),
         }
     }
@@ -153,54 +86,65 @@ impl Table {
         self.players.push(Player::new(name));
         return match self.players.last() {
             Some(p) => Ok(p),
-            None => Err(String::from("This player has already been registered."))
-        }
+            None => Err(String::from("This player has already been registered.")),
+        };
     }
 }
 
-fn vec_compare<T: std::cmp::PartialEq>(va: &[T], vb: &[T]) -> bool {
-    (va.len() == vb.len()) &&  // zip stops at the shortest
-     va.iter()
-       .zip(vb)
-       .all(|(a,b)| *a==*b)
-}
-#[test]
-fn test() {
-    let card =Card {
-        value: 12,
-        suite:Suite::Hearts,
-        facing:Facing::Up,
-    };
-    assert_eq!(card.value, 12);
 
-    let values = [11, 12, 13, 10, 1];
-    let mut deck =Deck::build(&values, String::from("black"));
-
-    assert_eq!(deck.number_remaining_cards(), 20);
-    let first_card = deck.take_from_top();
-    assert_eq!(deck.number_remaining_cards(), 19);
-    if first_card.is_none() {
-        return;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    const values: [u8; 5] = [11, 12, 13, 10, 1];
+    
+    fn vec_compare<T: std::cmp::PartialEq>(va: &[T], vb: &[T]) -> bool {
+        (va.len() == vb.len()) &&  // zip stops at the shortest
+         va.iter()
+           .zip(vb)
+           .all(|(a,b)| *a==*b)
+    }
+    
+    fn setup_deck() -> Deck {
+        Deck::build(&values, String::from("black"))
+    }
+    
+    #[test]
+    fn can_create_a_deck() {
+        let deck = setup_deck();
+        assert_eq!(deck.number_remaining_cards(), 20);
     }
 
-    let mut first_card = first_card.unwrap();
-    assert_eq!(first_card.value, 1);
-    assert_eq!(first_card.to_string(), "a card");
-    first_card.turn_around();
-    assert_eq!(first_card.to_string(), "Ace of Pikes");
-    assert_eq!(first_card.suite,Suite::Pikes);
-    deck.shuffle();
+    #[test]
+    fn can_take_a_card_from_top() {
+        let mut deck = setup_deck();
+        let mut top_card = deck.take_from_top().unwrap();
+        assert_eq!(deck.number_remaining_cards(), 19);
+        top_card.turn_around();
+        assert!(top_card.to_string() == String::from("Ace of Pikes"));
+    }
 
-    let some_cards = deck.take(5);
-    assert_eq!(some_cards.len(), 5);
+    #[test]
+    fn can_remove_a_few_cards_from_the_deck() {
+        let mut deck = setup_deck();
+        let some_cards = deck.take(5);
+        assert_eq!(some_cards.len(), 5);
+        assert_eq!(deck.number_remaining_cards(), 15);
+    }
 
-    let cmp_values: Vec<u8> = some_cards.iter().map(|c| c.value).collect();
-    assert!(
-        !vec_compare(&cmp_values, &values),
-        "no shuffle happened in between"
-    );
+    #[test]
+    fn can_shuffle_deck() {
+        let mut deck = setup_deck();
+        deck.shuffle();
+        let some_cards = deck.take(5);
+        let cmp_values: Vec<u8> = some_cards.iter().map(|c| c.value).collect();
+        assert!(
+            !vec_compare(&cmp_values, &values),
+            "no shuffle happened in between"
+        );
 
-    let mut table =Table::new();
-    let alice = table.add_player(String::from("alice"));
-    let bob = table.add_player(String::from("bob"));
+        let mut table = Table::new();
+        let alice = table.add_player(String::from("alice"));
+        let bob = table.add_player(String::from("bob"));
+    }
 }
