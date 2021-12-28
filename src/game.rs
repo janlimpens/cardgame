@@ -2,8 +2,6 @@
 #![allow(unused_variables)]
 
 use rand::seq::SliceRandom;
-// use std::collections::HashMap;
-
 use crate::card::{Card, Facing, Stack, Suite};
 
 #[derive(Debug)]

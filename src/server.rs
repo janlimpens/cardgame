@@ -99,7 +99,7 @@ impl Server {
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
-enum Request {
+pub(crate) enum Request {
     RegisterPlayer { player_name: String },
 }
 
@@ -126,89 +126,92 @@ pub struct Player {
 }
 
 #[cfg(test)]
-#[test]
-fn setup_server() {
-    let s = Server::new();
-}
-#[test]
-fn registers_valid_player() {
-    let mut s = Server::new();
-    let reg = s.register_player(&"Hansi".to_string());
-    assert!(reg.is_ok());
-}
-#[test]
-fn register_player_twice_fails() {
-    let mut s = Server::new();
-    let _ = s.register_player(&"Hansi".to_string());
-    let reg = s.register_player(&"Hansi".to_string());
-    assert!(reg.is_err());
-}
-#[test]
-fn registering_a_new_game_without_a_valid_user_fails() {
-    let mut s = Server::new();
-    let player_name = String::from("Hansi");
-    let game_title = String::from("Schnapsen01");
-    let reg = s.register_game(&player_name, &game_title);
-    assert!(reg.is_err());
-}
-#[test]
-fn registering_a_new_game_with_a_valid_user_succeeds() {
-    let mut s = Server::new();
-    let player_name = String::from("Hansi");
-    let game_title = String::from("Schnapsen01");
-    let _ = s.register_player(&"Hansi".to_string());
-    let reg = s.register_game(&player_name, &game_title);
-    assert!(reg.is_ok());
-}
-#[test]
-fn can_set_current_player() {
-    let mut s = Server::new();
-    let hansi = String::from("Hansi");
-    let fritzi = String::from("Fritzi");
-    let game_title = String::from("Schnapsen01");
-    s.register_player(&hansi).unwrap();
-    s.register_player(&fritzi).unwrap();
-    let game = s.register_game(&hansi, &game_title).unwrap();
-    assert!(s.get_current_player(&game_title).unwrap().name == hansi);
-    s.add_player_to_game(&game_title, &fritzi).unwrap();
-    s.set_current_player(&game_title, &fritzi).unwrap();
-    assert!(s.get_current_player(&game_title).unwrap().name == fritzi);
-}
-#[test]
-fn cant_set_invalid_current_player() {
-    let mut s = Server::new();
-    let hansi = String::from("Hansi");
-    let fritzi = String::from("Fritzi");
-    let game_title = String::from("Schnapsen01");
-    s.register_player(&hansi).unwrap();
-    s.register_player(&fritzi).unwrap();
-    let game = s.register_game(&hansi, &game_title).unwrap();
-    assert!(s.get_current_player(&game_title).unwrap().name == hansi);    
-    assert!(s.set_current_player(&game_title, &fritzi).is_err());
-}
-#[test]
-fn fails_adding_unregistered_player() {
-    let mut s = Server::new();
-    let player_name = &"pn".to_string();
-    let game_id = &"gid".to_string();
-    s.register_player(player_name).unwrap();
-    s.register_game(player_name, game_id).unwrap();
-    assert!(s.add_player_to_game(game_id, &"xxx".to_string()).is_err());
-}
+mod tests {
+    use super::*;
 
-#[test]
-fn handles_register_player_request() {
-    let req = Request::RegisterPlayer {player_name: "Hansi".to_string()};
-    let ser = serde_json::to_string(&req).unwrap();
-    let mut s = Server::new();
-    let response = s.handle(ser);
-    let response:Response = serde_json::from_str(&response).unwrap();
-    match response {
-        Response::RegisterPlayer{ success, message, player_name } => {
-            assert!(success);
-            assert!(player_name == "Hansi".to_string());
-            assert!(s.players.contains_key(&player_name));
-        }
-    }    
-    
+    #[test]
+    fn setup_server() {
+        let s = Server::new();
+    }
+    #[test]
+    fn registers_valid_player() {
+        let mut s = Server::new();
+        let reg = s.register_player(&"Hansi".to_string());
+        assert!(reg.is_ok());
+    }
+    #[test]
+    fn register_player_twice_fails() {
+        let mut s = Server::new();
+        let _ = s.register_player(&"Hansi".to_string());
+        let reg = s.register_player(&"Hansi".to_string());
+        assert!(reg.is_err());
+    }
+    #[test]
+    fn registering_a_new_game_without_a_valid_user_fails() {
+        let mut s = Server::new();
+        let player_name = String::from("Hansi");
+        let game_title = String::from("Schnapsen01");
+        let reg = s.register_game(&player_name, &game_title);
+        assert!(reg.is_err());
+    }
+    #[test]
+    fn registering_a_new_game_with_a_valid_user_succeeds() {
+        let mut s = Server::new();
+        let player_name = String::from("Hansi");
+        let game_title = String::from("Schnapsen01");
+        let _ = s.register_player(&"Hansi".to_string());
+        let reg = s.register_game(&player_name, &game_title);
+        assert!(reg.is_ok());
+    }
+    #[test]
+    fn can_set_current_player() {
+        let mut s = Server::new();
+        let hansi = String::from("Hansi");
+        let fritzi = String::from("Fritzi");
+        let game_title = String::from("Schnapsen01");
+        s.register_player(&hansi).unwrap();
+        s.register_player(&fritzi).unwrap();
+        let game = s.register_game(&hansi, &game_title).unwrap();
+        assert!(s.get_current_player(&game_title).unwrap().name == hansi);
+        s.add_player_to_game(&game_title, &fritzi).unwrap();
+        s.set_current_player(&game_title, &fritzi).unwrap();
+        assert!(s.get_current_player(&game_title).unwrap().name == fritzi);
+    }
+    #[test]
+    fn cant_set_invalid_current_player() {
+        let mut s = Server::new();
+        let hansi = String::from("Hansi");
+        let fritzi = String::from("Fritzi");
+        let game_title = String::from("Schnapsen01");
+        s.register_player(&hansi).unwrap();
+        s.register_player(&fritzi).unwrap();
+        let game = s.register_game(&hansi, &game_title).unwrap();
+        assert!(s.get_current_player(&game_title).unwrap().name == hansi);    
+        assert!(s.set_current_player(&game_title, &fritzi).is_err());
+    }
+    #[test]
+    fn fails_adding_unregistered_player() {
+        let mut s = Server::new();
+        let player_name = &"pn".to_string();
+        let game_id = &"gid".to_string();
+        s.register_player(player_name).unwrap();
+        s.register_game(player_name, game_id).unwrap();
+        assert!(s.add_player_to_game(game_id, &"xxx".to_string()).is_err());
+    }
+
+    #[test]
+    fn handles_register_player_request() {
+        let req = Request::RegisterPlayer {player_name: "Hansi".to_string()};
+        let ser = serde_json::to_string(&req).unwrap();
+        let mut s = Server::new();
+        let response = s.handle(ser);
+        let response:Response = serde_json::from_str(&response).unwrap();
+        match response {
+            Response::RegisterPlayer{ success, message, player_name } => {
+                assert!(success);
+                assert!(player_name == "Hansi".to_string());
+                assert!(s.players.contains_key(&player_name));
+            }
+        }       
+    }
 }
