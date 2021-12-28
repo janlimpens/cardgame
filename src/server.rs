@@ -82,22 +82,35 @@ impl Server {
         Ok(self.players.get(player_name).unwrap())
     }
 
-    pub fn handle(&mut self, msg: String) -> Result<String, String> {
-        let message: Message = serde_json::from_str(&msg).unwrap();
-        match message {
-            Message::RegisterPlayerRequest { player_name } => {
-                match self.register_player(&player_name) {
-                    Ok(p) => Ok(p.name.to_string()),
-                    Err(e)=> Err(e.to_string())
-                }
+    pub fn handle(&mut self, request: String) -> String {
+        let request: Request = serde_json::from_str(&request).unwrap();
+        let response = match request {
+            Request::RegisterPlayer { player_name } => {
+                let result = self.register_player(&player_name);
+                let message = match result {
+                    Ok(_) => "Player registered sucessfully.",
+                    Err(e) => e
+                }.to_string();
+                Response::RegisterPlayer {player_name, success: result.is_ok(), message }
             }
-        }
+        };
+        serde_json::to_string(&response).unwrap()
     }
 }
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type")]
-enum Message {
-    RegisterPlayerRequest { player_name: String },
+enum Request {
+    RegisterPlayer { player_name: String },
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "type")]
+enum Response {
+    RegisterPlayer { 
+        success: bool,
+        message: String,
+        player_name: String 
+    },
 }
 pub struct Game {
     id: String,
@@ -185,9 +198,17 @@ fn fails_adding_unregistered_player() {
 
 #[test]
 fn handles_register_player_request() {
-    let req = Message::RegisterPlayerRequest {player_name: "Hansi".to_string()};
+    let req = Request::RegisterPlayer {player_name: "Hansi".to_string()};
     let ser = serde_json::to_string(&req).unwrap();
     let mut s = Server::new();
-    s.handle(ser).unwrap();
-    assert!(s.players.contains_key(&String::from("Hansi")));
+    let response = s.handle(ser);
+    let response:Response = serde_json::from_str(&response).unwrap();
+    match response {
+        Response::RegisterPlayer{ success, message, player_name } => {
+            assert!(success);
+            assert!(player_name == "Hansi".to_string());
+            assert!(s.players.contains_key(&player_name));
+        }
+    }    
+    
 }
