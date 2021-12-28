@@ -13,10 +13,10 @@ pub struct Deck {
 }
 
 impl Deck {
-    pub fn build(values: &[u8], color: String) -> Self {
+    pub fn build(values: &[u8], color: &String) -> Self {
         let mut deck = Deck {
             cards: Vec::new(),
-            color,
+            color: color.clone(),
         };
         let suites = [Suite::Hearts, Suite::Tiles, Suite::Clovers, Suite::Pikes];
         for &value in values {
@@ -28,7 +28,7 @@ impl Deck {
                 });
             }
         }
-        println!("A {color} deck has been created.");
+        println!("A {} deck has been created.", color.clone());
         deck
     }
 
@@ -74,7 +74,6 @@ pub struct Table {
 }
 
 impl Table {
-    
     pub fn new() -> Self {
         Table {
             stacks: Vec::new(),
@@ -91,24 +90,23 @@ impl Table {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    
-    const values: [u8; 5] = [11, 12, 13, 10, 1];
-    
+
+    const VALUES: [u8; 5] = [11, 12, 13, 10, 1];
+
     fn vec_compare<T: std::cmp::PartialEq>(va: &[T], vb: &[T]) -> bool {
         (va.len() == vb.len()) &&  // zip stops at the shortest
          va.iter()
            .zip(vb)
            .all(|(a,b)| *a==*b)
     }
-    
+
     fn setup_deck() -> Deck {
-        Deck::build(&values, String::from("black"))
+        Deck::build(&VALUES, &String::from("black"))
     }
-    
+
     #[test]
     fn can_create_a_deck() {
         let deck = setup_deck();
@@ -139,7 +137,7 @@ mod tests {
         let some_cards = deck.take(5);
         let cmp_values: Vec<u8> = some_cards.iter().map(|c| c.value).collect();
         assert!(
-            !vec_compare(&cmp_values, &values),
+            !vec_compare(&cmp_values, &VALUES),
             "no shuffle happened in between"
         );
 
