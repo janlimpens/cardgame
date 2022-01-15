@@ -97,15 +97,15 @@ impl Server {
         serde_json::to_string(&response).unwrap()
     }
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub(crate) enum Request {
     RegisterPlayer { player_name: String },
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
-enum Response {
+pub(crate) enum Response {
     RegisterPlayer { 
         success: bool,
         message: String,
